@@ -1,0 +1,2 @@
+Power Shell 실행시 오류 조치
+Set-ExecutionPolicy Bypass -Scope Process
