@@ -1,0 +1,69 @@
+PowerShell로 만드는 취약점 스캐너
+(https://www.techtarget.com/searchwindowsserver/tutorial/How-to-build-a-vulnerability-scanner-with-PowerShell)
+
+도메인 이름을 IP 주소로 변환
+
+PS> $url = "www.naver.com"
+PS> $ip = [System.Net.Dns]::Resolve($url).AddressList
+PS> $ip | Select-Object -ExpandProperty IPAddressToString
+
+CVEs를 조회하기 위해 MSRC Security Updates 모듈 설치
+PS> Install-Module -Name MSRCSecurityUpdates -Force -Scope CurrentUser
+PS> Import-Module MSRCSecurityUpdates
+
+
+PS> $file = "D:\Training\March2026.html"
+PS> $month= '2026-Mar'
+PS> $download = Get-MsrcCvrfDocument -ID $month -Verbose | Get-MsrcSecurityBulletinHtml -Verbose
+PS> $download | Out-File $file
+
+
+다운로드된 파일은 CVE ID, 설명, 심각도, 취약점 영향 그리고  영향받는 소프트웨어를 포함한다. 
+쿼리에 1을 포함하여 완화책을 쿼리에 0을 포함하여 해결책을 추출한다.
+
+PS> $month= '2026-Mar'
+PS> $document = Get-MsrcCvrfDocument -ID $month
+PS> $document.Vulnerability.Remediations | Where Type -EQ 0
+PS> $document.Vulnerability.Remediations | Where Type -EQ 1
+
+특정한 달에 출현한 취약점으로  영향받는 시스템의 상세한 항목을 취합한다.
+
+PS> $month= '2026-Mar'
+PS> $document = Get-MsrcCvrfDocument -ID $month
+PS> Get-MsrcCvrfAffectedSoftware `
+	-Vulnerability $document.Vulnerability `
+	-ProductTree $document.ProductTree
+
+특정 CVE에 대한 보안 업데이트를 찾는 쿼리
+
+PS> $cve = "CVE-2026-26133"
+PS> Get-MsrcSecurityUpdate -Vulnerability $cve
+
+
+취약점이 있는 파일 스캔
+
+Apache Log4j 취약점을 이용하는 침투나 랜섬웨어 공격을 막기 위해서 신속한 대응이 요구된다.
+
+디스크 드라이브와 파일을 반복하면서 .jar나 .war 파일을 찾는다.
+
+PS> $extensions = @('*.JAR', '*.WAR')
+PS> $disks = (Get-WmiObject `
+-Class Win32_LogicalDisk `
+-Filter "DriveType ='3'").DeviceID
+
+PS> foreach ($disk in $disks) {
+$disk = "$disk\"
+$files = Get-ChildItem $disk `
+-Recurse -ErrorVariable DriveError `
+-Include $extensions `
+-ErrorAction SilentlyContinue 
+foreach ($file in $files) {
+$scanned += [pscustomobject] (Test-Path $file)
+} 
+}
+
+PS> Out-File $scanned
+
+
+
+
